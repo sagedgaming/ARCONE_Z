@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Anime Coin Wallet</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    input, button {
+      width: 90%;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background-color: #ff4081;
+      color: white;
+      cursor: pointer;
+    }
+    .section {
+      display: none;
+    }
+    .visible {
+      display: block;
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+</head>
+<body>
+  <h1>Anime Coin Wallet</h1>
+
+  <div id="login" class="section visible">
+    <h2>تسجيل الدخول</h2>
+    <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" />
+    <input type="password" id="loginPassword" placeholder="كلمة السر" />
+    <button onclick="login()">دخول</button>
+    <p><a href="#" onclick="showRegister()">أو إنشاء حساب جديد</a></p>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+
+  <div id="register" class="section">
+    <h2>تسجيل حساب جديد</h2>
+    <input type="email" id="registerEmail" placeholder="البريد الإلكتروني" />
+    <input type="password" id="registerPassword" placeholder="كلمة السر" />
+    <button onclick="register()">تسجيل</button>
+    <p><a href="#" onclick="showLogin()">عودة لتسجيل الدخول</a></p>
+    <p id="registerError" style="color:red;"></p>
+  </div>
+
+  <div id="wallet" class="section">
+    <h2>مرحبًا <span id="userEmail"></span></h2>
+    <p>رصيدك: <span id="balance">0</span> أنمي كوين</p>
+    <input type="email" id="recipientEmail" placeholder="بريد المستلم" />
+    <input type="number" id="amount" placeholder="عدد العملات" />
+    <button onclick="transfer()">تحويل</button>
+    <p id="status" style="color:yellow;"></p>
+    <br />
+    <button onclick="logout()">تسجيل الخروج</button>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmfk3gw8pbgsx6IwtMZDedVFp3XyZorxQ",
+      authDomain: "anime-coin-8d5bb.firebaseapp.com",
+      projectId: "anime-coin-8d5bb",
+      storageBucket: "anime-coin-8d5bb.appspot.com",
+      messagingSenderId: "669401752650",
+      appId: "1:669401752650:web:3d808ef53d5e541b2772b3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function showRegister() {
+      document.getElementById("login").classList.remove("visible");
+      document.getElementById("register").classList.add("visible");
+    }
+
+    function showLogin() {
+      document.getElementById("register").classList.remove("visible");
+      document.getElementById("login").classList.add("visible");
+    }
+
+    function showWallet() {
+      document.getElementById("login").classList.remove("visible");
+      document.getElementById("register").classList.remove("visible");
+      document.getElementById("wallet").classList.add("visible");
+    }
+
+    function register() {
+      const email = document.getElementById("registerEmail").value;
+      const password = document.getElementById("registerPassword").value;
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(user => {
+          db.collection("users").doc(email).set({ balance: 100 });
+          showLogin();
+        })
+        .catch(error => {
+          document.getElementById("registerError").innerText = error.message;
+        });
+    }
+
+    function login() {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(user => {
+          document.getElementById("userEmail").innerText = email;
+          db.collection("users").doc(email).get().then(doc => {
+            document.getElementById("balance").innerText = doc.data().balance;
+            showWallet();
+          });
+        })
+        .catch(error => {
+          document.getElementById("loginError").innerText = error.message;
+        });
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        showLogin();
+      });
+    }
+
+    function transfer() {
+      const from = auth.currentUser.email;
+      const to = document.getElementById("recipientEmail").value;
+      const amount = parseInt(document.getElementById("amount").value);
+
+      if (!to || isNaN(amount) || amount <= 0) {
+        document.getElementById("status").innerText = "❌ أدخل بيانات صحيحة";
+        return;
+      }
+
+      db.collection("users").doc(from).get().then(doc => {
+        const fromBalance = doc.data().balance || 0;
+        if (fromBalance < amount) {
+          document.getElementById("status").innerText = "❌ رصيد غير كافٍ";
+          return;
+        }
+
+        db.collection("users").doc(to).get().then(doc2 => {
+          if (!doc2.exists) {
+            document.getElementById("status").innerText = "❌ المستلم غير موجود";
+            return;
+          }
+
+          const toBalance = doc2.data().balance || 0;
+          db.collection("users").doc(from).update({ balance: fromBalance - amount });
+          db.collection("users").doc(to).update({ balance: toBalance + amount });
+
+          document.getElementById("balance").innerText = fromBalance - amount;
+          document.getElementById("status").innerText = "✅ تم التحويل";
+        });
+      });
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("userEmail").innerText = user.email;
+        db.collection("users").doc(user.email).get().then(doc => {
+          document.getElementById("balance").innerText = doc.data().balance;
+          showWallet();
+        });
+      }
+    });
+  </script>
+</body>
+</html>
