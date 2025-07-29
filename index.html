@@ -1,120 +1,104 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>جروب GOJO</title>
+  <meta charset="UTF-8">
+  <title>نظام تسجيل الدخول</title>
   <style>
     body {
+      background-color: #000;
+      color: #0f0;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      font-family: 'Cairo', sans-serif;
-      background-color: #0a0a0a;
-      color: #00ff88;
     }
     .container {
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
-    }
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: none;
-      font-size: 16px;
-      border-radius: 5px;
+      background-color: #111;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #0f0;
+      width: 300px;
     }
     input {
-      background-color: #111;
-      color: #00ff88;
-      border: 1px solid #00ff88;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+      background: #222;
+      color: #0f0;
     }
     button {
-      background-color: #00ff88;
+      width: 100%;
+      padding: 10px;
+      background-color: #0f0;
       color: #000;
+      border: none;
+      border-radius: 5px;
       font-weight: bold;
     }
-    .card {
-      background: #111;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #00ff88;
-    }
-    .hidden {
-      display: none;
-    }
   </style>
-  <script type="module">
-    // Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      signInWithEmailAndPassword,
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      setDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDG8TEb_VTzFD0RAXS23SAFb5fD1Kh60sI",
-      authDomain: "anime-coin-8d5bb.firebaseapp.com",
-      projectId: "anime-coin-8d5bb",
-      storageBucket: "anime-coin-8d5bb.appspot.com",
-      messagingSenderId: "399380379835",
-      appId: "1:399380379835:web:a768bcf0cb6e3b112d53ef"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    window.login = async () => {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      try {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        const uid = userCred.user.uid;
-        const userDoc = await getDoc(doc(db, "users", uid));
-        let data = { coins: 0, message: "أهلاً بك!" };
-
-        if (!userDoc.exists()) {
-          await setDoc(doc(db, "users", uid), data);
-        } else {
-          data = userDoc.data();
-        }
-
-        document.getElementById("login").classList.add("hidden");
-        document.getElementById("dashboard").classList.remove("hidden");
-        document.getElementById("coin").textContent = data.coins;
-        document.getElementById("msg").textContent = data.message;
-      } catch (e) {
-        alert("فشل الدخول: " + e.message);
-      }
-    };
-  </script>
 </head>
 <body>
   <div class="container">
-    <div id="login">
-      <h2>تسجيل الدخول</h2>
-      <input id="email" type="email" placeholder="البريد الإلكتروني" />
-      <input id="password" type="password" placeholder="كلمة المرور" />
-      <button onclick="login()">دخول</button>
-    </div>
-
-    <div id="dashboard" class="hidden">
-      <div class="card">
-        <h3>رصيدك</h3>
-        <p><strong id="coin">0</strong> كوين</p>
-        <h3>رسالتك</h3>
-        <p id="msg">---</p>
-      </div>
-    </div>
+    <h2>تسجيل الدخول / إنشاء حساب</h2>
+    <input type="text" id="username" placeholder="اسم المستخدم" />
+    <input type="password" id="password" placeholder="كلمة المرور" />
+    <button onclick="login()">دخول</button>
+    <p id="status"></p>
   </div>
+
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script>
+    // إعدادات Firebase (غيّرها إن لزم)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDG8TEb_VTzFD0RAXS23SAFb5fD1Kh60sI",
+      authDomain: "anime-coin-8d5bb.firebaseapp.com",
+      databaseURL: "https://anime-coin-8d5bb-default-rtdb.firebaseio.com",
+      projectId: "anime-coin-8d5bb",
+      storageBucket: "anime-coin-8d5bb.appspot.com",
+      messagingSenderId: "326604354948",
+      appId: "1:326604354948:web:3c0fe0a56f3be04ee01a7b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const status = document.getElementById("status");
+
+      if (!username || !password) {
+        status.textContent = "يرجى إدخال الاسم وكلمة المرور.";
+        return;
+      }
+
+      db.ref("users/" + username).once("value").then(snapshot => {
+        if (snapshot.exists()) {
+          // الحساب موجود → تحقق من كلمة المرور
+          if (snapshot.val().password === password) {
+            status.textContent = "تم تسجيل الدخول بنجاح!";
+          } else {
+            status.textContent = "كلمة المرور غير صحيحة.";
+          }
+        } else {
+          // إنشاء حساب جديد
+          db.ref("users/" + username).set({
+            password: password,
+            credit: 0,
+            messages: []
+          }).then(() => {
+            status.textContent = "تم إنشاء الحساب وتسجيل الدخول!";
+          });
+        }
+      });
+    }
+  </script>
 </body>
 </html>
