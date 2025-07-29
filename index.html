@@ -1,181 +1,147 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>Anime Coin Wallet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - مجموعة واتساب</title>
   <style>
     body {
-      background-color: #121212;
-      color: white;
+      background-color: #111;
+      color: #0f0;
       font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
-    input, button {
-      width: 90%;
+    .box {
+      background-color: #222;
+      padding: 20px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 10px #0f0;
+    }
+    input {
+      width: 100%;
       padding: 10px;
-      margin: 8px 0;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
+      margin: 10px 0;
+      background-color: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      border-radius: 5px;
     }
     button {
-      background-color: #ff4081;
-      color: white;
+      width: 100%;
+      padding: 10px;
+      background-color: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
       cursor: pointer;
     }
-    .section {
-      display: none;
+    .chat {
+      margin-top: 30px;
+      width: 100%;
+      max-width: 400px;
     }
-    .visible {
-      display: block;
+    .message {
+      background-color: #333;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
     }
   </style>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
 </head>
 <body>
-  <h1>Anime Coin Wallet</h1>
 
-  <div id="login" class="section visible">
+  <div class="box">
     <h2>تسجيل الدخول</h2>
-    <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" />
-    <input type="password" id="loginPassword" placeholder="كلمة السر" />
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
     <button onclick="login()">دخول</button>
-    <p><a href="#" onclick="showRegister()">أو إنشاء حساب جديد</a></p>
-    <p id="loginError" style="color:red;"></p>
+    <button onclick="signup()">تسجيل جديد</button>
   </div>
 
-  <div id="register" class="section">
-    <h2>تسجيل حساب جديد</h2>
-    <input type="email" id="registerEmail" placeholder="البريد الإلكتروني" />
-    <input type="password" id="registerPassword" placeholder="كلمة السر" />
-    <button onclick="register()">تسجيل</button>
-    <p><a href="#" onclick="showLogin()">عودة لتسجيل الدخول</a></p>
-    <p id="registerError" style="color:red;"></p>
+  <div class="chat" id="chat" style="display: none;">
+    <h3>الدردشة</h3>
+    <div id="messages"></div>
+    <input type="text" id="msg" placeholder="اكتب رسالة">
+    <button onclick="sendMessage()">إرسال</button>
   </div>
 
-  <div id="wallet" class="section">
-    <h2>مرحبًا <span id="userEmail"></span></h2>
-    <p>رصيدك: <span id="balance">0</span> أنمي كوين</p>
-    <input type="email" id="recipientEmail" placeholder="بريد المستلم" />
-    <input type="number" id="amount" placeholder="عدد العملات" />
-    <button onclick="transfer()">تحويل</button>
-    <p id="status" style="color:yellow;"></p>
-    <br />
-    <button onclick="logout()">تسجيل الخروج</button>
-  </div>
+  <script type="module">
+    // Firebase إعدادات
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      onChildAdded
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCmfk3gw8pbgsx6IwtMZDedVFp3XyZorxQ",
-      authDomain: "anime-coin-8d5bb.firebaseapp.com",
-      projectId: "anime-coin-8d5bb",
-      storageBucket: "anime-coin-8d5bb.appspot.com",
-      messagingSenderId: "669401752650",
-      appId: "1:669401752650:web:3d808ef53d5e541b2772b3"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getDatabase(app);
 
-    function showRegister() {
-      document.getElementById("login").classList.remove("visible");
-      document.getElementById("register").classList.add("visible");
-    }
+    // تسجيل
+    window.signup = () => {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      createUserWithEmailAndPassword(auth, email, pass)
+        .then(() => alert("تم التسجيل بنجاح"))
+        .catch(err => alert(err.message));
+    };
 
-    function showLogin() {
-      document.getElementById("register").classList.remove("visible");
-      document.getElementById("login").classList.add("visible");
-    }
-
-    function showWallet() {
-      document.getElementById("login").classList.remove("visible");
-      document.getElementById("register").classList.remove("visible");
-      document.getElementById("wallet").classList.add("visible");
-    }
-
-    function register() {
-      const email = document.getElementById("registerEmail").value;
-      const password = document.getElementById("registerPassword").value;
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(user => {
-          db.collection("users").doc(email).set({ balance: 100 });
-          showLogin();
+    // دخول
+    window.login = () => {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      signInWithEmailAndPassword(auth, email, pass)
+        .then(() => {
+          document.querySelector(".box").style.display = "none";
+          document.getElementById("chat").style.display = "block";
         })
-        .catch(error => {
-          document.getElementById("registerError").innerText = error.message;
-        });
-    }
+        .catch(err => alert("خطاء في الدخول"));
+    };
 
-    function login() {
-      const email = document.getElementById("loginEmail").value;
-      const password = document.getElementById("loginPassword").value;
-      auth.signInWithEmailAndPassword(email, password)
-        .then(user => {
-          document.getElementById("userEmail").innerText = email;
-          db.collection("users").doc(email).get().then(doc => {
-            document.getElementById("balance").innerText = doc.data().balance;
-            showWallet();
-          });
-        })
-        .catch(error => {
-          document.getElementById("loginError").innerText = error.message;
-        });
-    }
-
-    function logout() {
-      auth.signOut().then(() => {
-        showLogin();
-      });
-    }
-
-    function transfer() {
-      const from = auth.currentUser.email;
-      const to = document.getElementById("recipientEmail").value;
-      const amount = parseInt(document.getElementById("amount").value);
-
-      if (!to || isNaN(amount) || amount <= 0) {
-        document.getElementById("status").innerText = "❌ أدخل بيانات صحيحة";
-        return;
+    // إرسال رسالة
+    window.sendMessage = () => {
+      const msg = document.getElementById("msg").value;
+      if (msg.trim()) {
+        push(ref(db, "messages"), { text: msg });
+        document.getElementById("msg").value = "";
       }
+    };
 
-      db.collection("users").doc(from).get().then(doc => {
-        const fromBalance = doc.data().balance || 0;
-        if (fromBalance < amount) {
-          document.getElementById("status").innerText = "❌ رصيد غير كافٍ";
-          return;
-        }
-
-        db.collection("users").doc(to).get().then(doc2 => {
-          if (!doc2.exists) {
-            document.getElementById("status").innerText = "❌ المستلم غير موجود";
-            return;
-          }
-
-          const toBalance = doc2.data().balance || 0;
-          db.collection("users").doc(from).update({ balance: fromBalance - amount });
-          db.collection("users").doc(to).update({ balance: toBalance + amount });
-
-          document.getElementById("balance").innerText = fromBalance - amount;
-          document.getElementById("status").innerText = "✅ تم التحويل";
-        });
-      });
-    }
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("userEmail").innerText = user.email;
-        db.collection("users").doc(user.email).get().then(doc => {
-          document.getElementById("balance").innerText = doc.data().balance;
-          showWallet();
-        });
-      }
+    // عرض الرسائل
+    const messagesDiv = document.getElementById("messages");
+    onChildAdded(ref(db, "messages"), snapshot => {
+      const p = document.createElement("div");
+      p.className = "message";
+      p.textContent = snapshot.val().text;
+      messagesDiv.appendChild(p);
     });
+
   </script>
+
 </body>
-</html>
+  </html>
