@@ -1,147 +1,120 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تسجيل الدخول - مجموعة واتساب</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>جروب GOJO</title>
   <style>
     body {
-      background-color: #111;
-      color: #0f0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      margin: 0;
+      font-family: 'Cairo', sans-serif;
+      background-color: #0a0a0a;
+      color: #00ff88;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
       padding: 20px;
     }
-    .box {
-      background-color: #222;
-      padding: 20px;
-      border-radius: 10px;
+    input, button {
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 0 10px #0f0;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      font-size: 16px;
+      border-radius: 5px;
     }
     input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      background-color: #000;
-      color: #0f0;
-      border: 1px solid #0f0;
-      border-radius: 5px;
+      background-color: #111;
+      color: #00ff88;
+      border: 1px solid #00ff88;
     }
     button {
-      width: 100%;
-      padding: 10px;
-      background-color: #0f0;
+      background-color: #00ff88;
       color: #000;
-      border: none;
-      border-radius: 5px;
       font-weight: bold;
-      cursor: pointer;
     }
-    .chat {
-      margin-top: 30px;
-      width: 100%;
-      max-width: 400px;
+    .card {
+      background: #111;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #00ff88;
     }
-    .message {
-      background-color: #333;
-      color: #0f0;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 10px;
+    .hidden {
+      display: none;
     }
   </style>
-</head>
-<body>
-
-  <div class="box">
-    <h2>تسجيل الدخول</h2>
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    <button onclick="login()">دخول</button>
-    <button onclick="signup()">تسجيل جديد</button>
-  </div>
-
-  <div class="chat" id="chat" style="display: none;">
-    <h3>الدردشة</h3>
-    <div id="messages"></div>
-    <input type="text" id="msg" placeholder="اكتب رسالة">
-    <button onclick="sendMessage()">إرسال</button>
-  </div>
-
   <script type="module">
-    // Firebase إعدادات
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getAuth,
-      createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getDatabase,
-      ref,
-      push,
-      onChildAdded
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com"
+      apiKey: "AIzaSyDG8TEb_VTzFD0RAXS23SAFb5fD1Kh60sI",
+      authDomain: "anime-coin-8d5bb.firebaseapp.com",
+      projectId: "anime-coin-8d5bb",
+      storageBucket: "anime-coin-8d5bb.appspot.com",
+      messagingSenderId: "399380379835",
+      appId: "1:399380379835:web:a768bcf0cb6e3b112d53ef"
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    // تسجيل
-    window.signup = () => {
+    window.login = async () => {
       const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      createUserWithEmailAndPassword(auth, email, pass)
-        .then(() => alert("تم التسجيل بنجاح"))
-        .catch(err => alert(err.message));
-    };
+      const password = document.getElementById("password").value;
 
-    // دخول
-    window.login = () => {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      signInWithEmailAndPassword(auth, email, pass)
-        .then(() => {
-          document.querySelector(".box").style.display = "none";
-          document.getElementById("chat").style.display = "block";
-        })
-        .catch(err => alert("خطاء في الدخول"));
-    };
+      try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+        const userDoc = await getDoc(doc(db, "users", uid));
+        let data = { coins: 0, message: "أهلاً بك!" };
 
-    // إرسال رسالة
-    window.sendMessage = () => {
-      const msg = document.getElementById("msg").value;
-      if (msg.trim()) {
-        push(ref(db, "messages"), { text: msg });
-        document.getElementById("msg").value = "";
+        if (!userDoc.exists()) {
+          await setDoc(doc(db, "users", uid), data);
+        } else {
+          data = userDoc.data();
+        }
+
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        document.getElementById("coin").textContent = data.coins;
+        document.getElementById("msg").textContent = data.message;
+      } catch (e) {
+        alert("فشل الدخول: " + e.message);
       }
     };
-
-    // عرض الرسائل
-    const messagesDiv = document.getElementById("messages");
-    onChildAdded(ref(db, "messages"), snapshot => {
-      const p = document.createElement("div");
-      p.className = "message";
-      p.textContent = snapshot.val().text;
-      messagesDiv.appendChild(p);
-    });
-
   </script>
+</head>
+<body>
+  <div class="container">
+    <div id="login">
+      <h2>تسجيل الدخول</h2>
+      <input id="email" type="email" placeholder="البريد الإلكتروني" />
+      <input id="password" type="password" placeholder="كلمة المرور" />
+      <button onclick="login()">دخول</button>
+    </div>
 
+    <div id="dashboard" class="hidden">
+      <div class="card">
+        <h3>رصيدك</h3>
+        <p><strong id="coin">0</strong> كوين</p>
+        <h3>رسالتك</h3>
+        <p id="msg">---</p>
+      </div>
+    </div>
+  </div>
 </body>
-  </html>
+</html>
